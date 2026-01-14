@@ -2,140 +2,155 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<title>Meteo Avanzato</title>
+<title>Meteo World Pro</title>
 <style>
-* { box-sizing: border-box; }
-body {
-    margin: 0;
-    font-family: 'Segoe UI', sans-serif;
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: linear-gradient(135deg,#1d2671,#c33764);
-    color: white;
-}
-.app {
-    background: rgba(255,255,255,0.15);
-    backdrop-filter: blur(15px);
-    border-radius: 25px;
-    padding: 30px;
-    width: 380px;
-    max-width: 95%;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-    text-align: center;
-}
-h1 { margin-top:0; }
-input, button {
-    width: 100%;
-    padding: 12px;
-    border-radius: 12px;
-    border: none;
-    font-size: 16px;
-    margin-top:10px;
-}
-button { font-weight: bold; cursor:pointer; background:#ffffff;color:#333; }
-button:hover { opacity:0.9; }
-.card { margin-top:20px; }
-.temp { font-size:48px; font-weight:bold; }
-.small { font-size:14px; opacity:0.9; margin-top:5px; }
-.hr { border:none; height:1px; background:rgba(255,255,255,0.3); margin:15px 0; }
-.forecast { display:flex; justify-content:space-between; margin-top:15px; }
-.forecast-day { flex:1; margin:0 2px; background:rgba(255,255,255,0.1); border-radius:10px; padding:5px; }
-.icon { font-size:24px; }
-.night { background: linear-gradient(135deg,#0f2027,#203a43); }
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',sans-serif;min-height:100vh;display:flex;justify-content:center;align-items:center;background:linear-gradient(135deg,#4facfe,#00f2fe);color:white;}
+.app{background:rgba(255,255,255,0.15);backdrop-filter:blur(25px);border-radius:25px;padding:25px;width:450px;max-width:95%;box-shadow:0 10px 50px rgba(0,0,0,0.3);position:relative;overflow:hidden;}
+h1{text-align:center;margin-bottom:15px;}
+input,button,select{width:100%;padding:12px;border-radius:12px;border:none;font-size:16px;margin-top:10px;}
+button{font-weight:bold;cursor:pointer;background:#ffffff;color:#333;}
+button:hover{opacity:0.9;}
+.card{margin-top:20px;background:rgba(0,0,0,0.2);padding:15px;border-radius:15px;position:relative;}
+.temp{font-size:50px;font-weight:bold;}
+.small{font-size:14px;opacity:0.9;margin-top:5px;}
+.hr{border:none;height:1px;background:rgba(255,255,255,0.3);margin:15px 0;}
+.forecast{display:flex;justify-content:space-between;margin-top:15px;flex-wrap:wrap;}
+.forecast-day{flex:1;margin:5px;background:rgba(255,255,255,0.1);border-radius:10px;padding:5px;text-align:center;}
+.icon{font-size:28px;}
+.night{background:linear-gradient(135deg,#0f2027,#203a43);}
+.map-link{display:block;margin-top:10px;color:white;text-decoration:none;font-weight:bold;}
+.map-link:hover{text-decoration:underline;}
+.nuvola{position:absolute;width:100px;height:60px;background:rgba(255,255,255,0.3);border-radius:50%;top:20px;animation:muoviNuvole 40s linear infinite;}
+@keyframes muoviNuvole{0%{left:-120px;}100%{left:500px;}}
+.pioggia{position:absolute;width:2px;height:12px;background:rgba(255,255,255,0.5);animation:piove 1s linear infinite;}
+@keyframes piove{0%{top:-12px;}100%{top:450px;}}
+canvas{margin-top:15px;border-radius:15px;background:rgba(255,255,255,0.1);}
 </style>
 </head>
 <body>
 <div class="app" id="app">
-    <h1>🌦️ Meteo Avanzato</h1>
-    <input id="citta" placeholder="Inserisci una città">
+    <div class="nuvola"></div>
+    <h1>🌍 Meteo World Pro</h1>
+    <input id="citta" placeholder="Inserisci città o codice postale">
     <button onclick="cercaCitta()">Cerca</button>
-    <button onclick="usaPosizione()">📍 Usa la mia posizione</button>
+    <button onclick="usaPosizione()">📍 Posizione automatica</button>
+    <select id="cittaInternazionale" onchange="selezionaCitta()">🌐 Seleziona città internazionale</select>
+
     <div id="meteo" class="card"></div>
     <div id="previsioni" class="forecast"></div>
+    <canvas id="grafico" width="400" height="180"></canvas>
 </div>
 
 <script>
-const API_KEY = "28a319d5da8a97fe0488bd10b1aaa1e6";
+const API_KEY="28a319d5da8a97fe0488bd10b1aaa1e6";
+const cittaInternazionali=["New York,US","London,GB","Paris,FR","Tokyo,JP","Sydney,AU"];
 
-function cercaCitta() {
-    const citta = document.getElementById("citta").value.trim();
-    if(!citta) return;
-    fetchMeteo(`q=${citta}`);
-}
+window.onload=()=>{ const sel=document.getElementById("cittaInternazionale"); cittaInternazionali.forEach(c=>{ const o=document.createElement("option"); o.value=c; o.textContent=c; sel.appendChild(o); }); }
 
-function usaPosizione() {
-    if(!navigator.geolocation){ alert("Geolocalizzazione non supportata"); return; }
-    navigator.geolocation.getCurrentPosition(pos=>{
-        fetchMeteo(`lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
-    });
-}
+function selezionaCitta(){ fetchMeteo(`q=${document.getElementById("cittaInternazionale").value}`); }
+
+function cercaCitta(){ const c=document.getElementById("citta").value.trim(); if(!c)return; fetchMeteo(`q=${c}`); }
+
+function usaPosizione(){ if(!navigator.geolocation){alert("Geolocalizzazione non supportata"); return;}
+navigator.geolocation.getCurrentPosition(pos=>{ fetchMeteo(`lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`); }); }
 
 function fetchMeteo(param){
     fetch(`https://api.openweathermap.org/data/2.5/weather?${param}&units=metric&lang=it&appid=${API_KEY}`)
-    .then(res=>{if(!res.ok)throw new Error(); return res.json()})
+    .then(res=>{if(!res.ok)throw new Error();return res.json()})
     .then(d=>mostraMeteo(d))
-    .catch(()=>{document.getElementById("meteo").innerHTML="❌ Dati non disponibili"; document.getElementById("previsioni").innerHTML=""});
+    .catch(()=>{document.getElementById("meteo").innerHTML="❌ Dati non disponibili";document.getElementById("previsioni").innerHTML="";});
     
-    // Fetch 5 giorni
     fetch(`https://api.openweathermap.org/data/2.5/forecast?${param}&units=metric&lang=it&appid=${API_KEY}`)
     .then(res=>res.json())
     .then(d=>mostraPrevisioni(d));
 }
 
 function mostraMeteo(d){
-    const alba = new Date(d.sys.sunrise*1000).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
-    const tramonto = new Date(d.sys.sunset*1000).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
-    const ora = new Date().toLocaleTimeString("it-IT");
-    const nightClass = (new Date().getHours() >= 18 || new Date().getHours() <6)? "night":"";
-    document.getElementById("app").className = "app "+nightClass;
-    document.getElementById("meteo").innerHTML = `
-        <h2>${d.name}</h2>
+    const alba=new Date(d.sys.sunrise*1000).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
+    const tramonto=new Date(d.sys.sunset*1000).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
+    const ora=new Date().toLocaleTimeString("it-IT");
+    const nightClass=(new Date().getHours()>=18||new Date().getHours()<6)?"night":"";
+    document.getElementById("app").className="app "+nightClass;
+
+    document.getElementById("meteo").innerHTML=`
+        <h2>${d.name}, ${d.sys.country}</h2>
         <div class="temp">${Math.round(d.main.temp)}°C</div>
         <div>${d.weather[0].description} <span class="icon">${getIcon(d.weather[0].icon)}</span></div>
         <div class="small">🌡️ Percepita: ${Math.round(d.main.feels_like)}°C</div>
         <div class="small">💨 Vento: ${d.wind.speed} m/s</div>
+        <div class="small">💧 Umidità: ${d.main.humidity}%</div>
         <div class="small">🌅 Alba: ${alba} 🌇 Tramonto: ${tramonto}</div>
+        <a class="map-link" href="https://www.google.com/maps/search/?api=1&query=${d.coord.lat},${d.coord.lon}" target="_blank">📍 Mostra su mappa</a>
         <div class="small">🕒 Aggiornato alle ${ora}</div>
     `;
+
+    const app=document.getElementById("app");
+    app.querySelectorAll(".pioggia").forEach(p=>p.remove());
+    if(d.weather[0].icon.startsWith("09")||d.weather[0].icon.startsWith("10")){
+        for(let i=0;i<50;i++){
+            const p=document.createElement("div");
+            p.className="pioggia";
+            p.style.left=Math.random()*450+"px";
+            p.style.animationDuration=(0.5+Math.random())+"s";
+            app.appendChild(p);
+        }
+    }
 }
 
 function mostraPrevisioni(d){
-    const giorni = {};
-    d.list.forEach(item=>{
-        const day = item.dt_txt.split(" ")[0];
-        if(!giorni[day]) giorni[day]=[];
-        giorni[day].push(item);
-    });
-    const keys = Object.keys(giorni).slice(0,5); // 5 giorni
-    const forecastDiv = document.getElementById("previsioni");
-    forecastDiv.innerHTML="";
+    const giorni={};
+    d.list.forEach(i=>{ const day=i.dt_txt.split(" ")[0]; if(!giorni[day]) giorni[day]=[]; giorni[day].push(i); });
+    const keys=Object.keys(giorni).slice(0,5);
+    const forecastDiv=document.getElementById("previsioni"); forecastDiv.innerHTML="";
+    const labels=[],tempsMin=[],tempsMax=[];
     keys.forEach(day=>{
-        const data = giorni[day][0];
+        const data=giorni[day][0];
+        labels.push(day.split("-")[2]+"/"+day.split("-")[1]);
+        let min=Math.min(...giorni[day].map(x=>x.main.temp_min));
+        let max=Math.max(...giorni[day].map(x=>x.main.temp_max));
+        tempsMin.push(min); tempsMax.push(max);
         forecastDiv.innerHTML+=`
         <div class="forecast-day">
             <div>${day.split("-")[2]}/${day.split("-")[1]}</div>
             <div class="icon">${getIcon(data.weather[0].icon)}</div>
-            <div>${Math.round(data.main.temp_min)}°/${Math.round(data.main.temp_max)}°</div>
+            <div>${Math.round(min)}°/${Math.round(max)}°</div>
         </div>`;
     });
+    disegnaGrafico(labels,tempsMin,tempsMax);
 }
 
 function getIcon(icon){
-    // Icone Unicode base
-    const map = {
-        "01d":"☀️","01n":"🌙",
-        "02d":"🌤️","02n":"🌤️",
-        "03d":"☁️","03n":"☁️",
-        "04d":"☁️","04n":"☁️",
-        "09d":"🌧️","09n":"🌧️",
-        "10d":"🌦️","10n":"🌦️",
-        "11d":"⛈️","11n":"⛈️",
-        "13d":"❄️","13n":"❄️",
-        "50d":"🌫️","50n":"🌫️"
-    };
+    const map={"01d":"☀️","01n":"🌙","02d":"🌤️","02n":"🌤️","03d":"☁️","03n":"☁️","04d":"☁️","04n":"☁️","09d":"🌧️","09n":"🌧️","10d":"🌦️","10n":"🌦️","11d":"⛈️","11n":"⛈️","13d":"❄️","13n":"❄️","50d":"🌫️","50n":"🌫️"};
     return map[icon]||"☀️";
+}
+
+function disegnaGrafico(labels,min,max){
+    const c=document.getElementById("grafico");
+    const ctx=c.getContext("2d");
+    ctx.clearRect(0,0,c.width,c.height);
+    ctx.strokeStyle="white"; ctx.lineWidth=2; ctx.fillStyle="rgba(255,255,255,0.3)"; ctx.font="12px sans-serif";
+
+    const w=c.width/labels.length;
+    const tempMax=Math.max(...max)+2; const tempMin=Math.min(...min)-2;
+
+    ctx.beginPath();
+    for(let i=0;i<labels.length;i++){
+        const x=w*i+w/2;
+        const yMax=c.height-( (max[i]-tempMin)/(tempMax-tempMin)*c.height );
+        const yMin=c.height-( (min[i]-tempMin)/(tempMax-tempMin)*c.height );
+        if(i===0){ ctx.moveTo(x,yMax); } else { ctx.lineTo(x,yMax); }
+    }
+    ctx.stroke();
+
+    for(let i=0;i<labels.length;i++){
+        const x=w*i+w/2;
+        const yMax=c.height-( (max[i]-tempMin)/(tempMax-tempMin)*c.height );
+        const yMin=c.height-( (min[i]-tempMin)/(tempMax-tempMin)*c.height );
+        ctx.beginPath(); ctx.arc(x,yMax,5,0,2*Math.PI); ctx.fill();
+        ctx.beginPath(); ctx.arc(x,yMin,5,0,2*Math.PI); ctx.fill();
+        ctx.fillText(labels[i],x-15,c.height-5);
+    }
 }
 </script>
 </body>
